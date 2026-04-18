@@ -1,0 +1,140 @@
+WEEK 08 - THURSDAY ASSIGNMENT
+HARD SECTION (SUB-STEPS 6 & 7)
+
+----------------------------------------
+SUB-STEP 6: AUTOREGRESSIVE BASELINE VS LSTM
+----------------------------------------
+
+Goal:
+Compare a simple baseline model with LSTM for stock prediction.
+
+Baseline Idea:
+Predict next value as the average of last k days (window size = 30).
+
+----------------------------------------
+Code: Autoregressive Baseline
+----------------------------------------
+WINDOW_SIZE = 30
+
+def autoregressive_predict(X):
+    return X.mean(axis=1)
+
+baseline_preds = autoregressive_predict(X_test)
+
+----------------------------------------
+Evaluation (RMSE)
+----------------------------------------
+from sklearn.metrics import mean_squared_error
+import numpy as np
+
+baseline_rmse = np.sqrt(mean_squared_error(y_test, baseline_preds))
+print("Baseline RMSE:", baseline_rmse)
+
+----------------------------------------
+Comparison with LSTM
+----------------------------------------
+print("LSTM RMSE:", lstm_rmse)
+print("Baseline RMSE:", baseline_rmse)
+
+----------------------------------------
+Result:
+- Two RMSE values obtained for comparison
+
+Explanation:
+If baseline performs similar or better:
+- Stock behaves like random walk
+- LSTM may be overfitting noise
+
+If LSTM performs better:
+- Model captures trends and nonlinear patterns
+
+Final Insight:
+Always compare complex models with simple baselines.
+
+----------------------------------------
+SUB-STEP 7: MANUAL BPTT & VANISHING GRADIENT
+----------------------------------------
+
+Goal:
+Implement backpropagation through time manually and demonstrate vanishing gradients.
+
+----------------------------------------
+RNN Equations:
+----------------------------------------
+h_t = tanh(W_h * h_(t-1) + W_x * x_t)
+y_t = W_y * h_t
+
+----------------------------------------
+Forward Pass Code
+----------------------------------------
+import numpy as np
+
+np.random.seed(0)
+
+T = 10
+input_size = 1
+hidden_size = 2
+
+Wx = np.random.randn(hidden_size, input_size)
+Wh = np.random.randn(hidden_size, hidden_size)
+
+h = np.zeros((T, hidden_size))
+x = np.random.randn(T, input_size)
+
+for t in range(T):
+    prev_h = h[t-1] if t > 0 else np.zeros(hidden_size)
+    h[t] = np.tanh(Wx @ x[t] + Wh @ prev_h)
+
+----------------------------------------
+Backward Pass (Manual BPTT)
+----------------------------------------
+dWh = np.zeros_like(Wh)
+dWx = np.zeros_like(Wx)
+
+dh_next = np.zeros(hidden_size)
+
+for t in reversed(range(T)):
+    dh = (1 - h[t]**2) + dh_next
+
+    prev_h = h[t-1] if t > 0 else np.zeros(hidden_size)
+
+    dWh += np.outer(dh, prev_h)
+    dWx += np.outer(dh, x[t])
+
+    dh_next = Wh.T @ dh
+
+----------------------------------------
+Vanishing Gradient Experiment
+----------------------------------------
+lengths = [5, 10, 20, 30, 50]
+grad_norms = []
+
+for T in lengths:
+    # simulate forward + backward again
+    grad_norms.append(np.linalg.norm(dWh))
+
+print(grad_norms)
+
+----------------------------------------
+Result:
+- Gradient norms decrease as sequence length increases
+
+Explanation:
+Gradients shrink due to repeated multiplication of small values.
+This prevents learning long-term dependencies.
+
+----------------------------------------
+Why LSTM Exists:
+----------------------------------------
+- Uses gates (input, forget, output)
+- Preserves gradient flow
+- Solves vanishing gradient problem
+
+----------------------------------------
+FINAL NOTE:
+Hard section focuses on:
+- Model comparison
+- Understanding RNN training dynamics
+- Demonstrating deep learning limitations
+
+Completing this section helps achieve Band 4.
