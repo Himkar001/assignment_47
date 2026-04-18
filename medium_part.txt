@@ -1,0 +1,183 @@
+WEEK 08 - THURSDAY ASSIGNMENT
+MEDIUM SECTION (SUB-STEPS 3, 4 & 5)
+
+----------------------------------------
+SUB-STEP 3: LSTM FOR STOCK PREDICTION
+----------------------------------------
+
+Goal:
+Predict next-day closing price using sequence data.
+
+Model Architecture (PyTorch):
+----------------------------------------
+import torch
+import torch.nn as nn
+
+class LSTMModel(nn.Module):
+    def __init__(self, input_size=1, hidden_size=64, num_layers=2):
+        super(LSTMModel, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        out, _ = self.lstm(x)
+        out = out[:, -1, :]
+        out = self.fc(out)
+        return out
+
+----------------------------------------
+
+Training Setup:
+----------------------------------------
+model = LSTMModel()
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+----------------------------------------
+
+Training Loop:
+----------------------------------------
+EPOCHS = 10
+
+for epoch in range(EPOCHS):
+    model.train()
+
+    inputs = torch.tensor(X_train, dtype=torch.float32)
+    targets = torch.tensor(y_train, dtype=torch.float32)
+
+    outputs = model(inputs)
+    loss = criterion(outputs, targets)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    print(f"Epoch {epoch+1}, Loss: {loss.item()}")
+
+----------------------------------------
+
+Evaluation:
+----------------------------------------
+model.eval()
+
+with torch.no_grad():
+    test_inputs = torch.tensor(X_test, dtype=torch.float32)
+    predictions = model(test_inputs).numpy()
+
+----------------------------------------
+
+Metric (RMSE):
+----------------------------------------
+from sklearn.metrics import mean_squared_error
+import numpy as np
+
+rmse = np.sqrt(mean_squared_error(y_test, predictions))
+print("RMSE:", rmse)
+
+Result:
+- Model outputs predicted prices
+- RMSE measures prediction error
+
+Explanation:
+LSTM captures temporal dependencies and patterns in stock prices.
+
+----------------------------------------
+SUB-STEP 4: CHURN PREDICTION
+----------------------------------------
+
+Goal:
+Predict which customers will churn.
+
+Approach 1: Tabular Model (Logistic Regression)
+----------------------------------------
+from sklearn.linear_model import LogisticRegression
+
+model_tab = LogisticRegression()
+model_tab.fit(X_train_tab, y_train_tab)
+
+preds_tab = model_tab.predict(X_test_tab)
+
+----------------------------------------
+
+Approach 2: Sequence Model (LSTM)
+----------------------------------------
+# Use similar LSTM as above with sequence features
+
+----------------------------------------
+
+Evaluation Metric (F1 Score):
+----------------------------------------
+from sklearn.metrics import f1_score
+
+f1 = f1_score(y_test_tab, preds_tab)
+print("F1 Score:", f1)
+
+Result:
+- F1 score reflects balance of precision and recall
+
+Explanation:
+Churn datasets are imbalanced, so F1 is better than accuracy.
+
+Decision Logic:
+- If tabular ≈ LSTM → use tabular (simpler)
+- If LSTM better → sequence matters
+
+----------------------------------------
+SUB-STEP 5: BUSINESS DECISION
+----------------------------------------
+
+Goal:
+Rank customers by churn risk and decide outreach.
+
+Step 1: Get Probabilities
+----------------------------------------
+probs = model_tab.predict_proba(X_test_tab)[:,1]
+
+----------------------------------------
+
+Step 2: Rank Customers
+----------------------------------------
+import pandas as pd
+
+results = pd.DataFrame({
+    "customer_id": customer_ids_test,
+    "churn_probability": probs
+})
+
+results = results.sort_values(by="churn_probability", ascending=False)
+
+----------------------------------------
+
+Step 3: Cost Model
+----------------------------------------
+Cost of contacting customer = ₹10
+Cost of missing churn = ₹100
+
+----------------------------------------
+
+Step 4: Threshold Selection
+----------------------------------------
+threshold = 0.3
+
+selected = results[results['churn_probability'] > threshold]
+
+----------------------------------------
+
+Result:
+- Ranked list of high-risk customers
+- Number of customers to contact
+
+Explanation:
+Threshold is chosen to minimize total cost:
+- Too low → unnecessary outreach
+- Too high → missed churn cases
+
+----------------------------------------
+
+FINAL NOTE:
+Medium section focuses on:
+- Model building
+- Model comparison
+- Business decision making
+
+This section carries most of the marks.
